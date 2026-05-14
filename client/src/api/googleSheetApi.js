@@ -1,6 +1,6 @@
 // client/src/api/googleSheetApi.js
 
-const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "/api/google";
 
 export function hasGoogleScriptUrl() {
   return Boolean(SCRIPT_URL && SCRIPT_URL.trim() !== "");
@@ -23,7 +23,9 @@ function getScriptUrl() {
 async function requestGet(action) {
   const url = `${getScriptUrl()}?action=${encodeURIComponent(
     action
-  )}&_=${Date.now()}`;
+  )}&cacheBust=${Date.now()}`;
+
+  console.log("TeePoP GET:", url);
 
   const response = await fetch(url, {
     method: "GET",
@@ -31,7 +33,9 @@ async function requestGet(action) {
   });
 
   if (!response.ok) {
-    throw new Error("Erro ao conectar com o Google Sheets.");
+    throw new Error(
+      `Erro ao conectar com o Google Sheets. Status: ${response.status}`
+    );
   }
 
   const result = await response.json();
@@ -56,7 +60,9 @@ async function requestPost(action, payload = {}) {
   });
 
   if (!response.ok) {
-    throw new Error("Erro ao salvar dados no Google Sheets.");
+    throw new Error(
+      `Erro ao salvar dados no Google Sheets. Status: ${response.status}`
+    );
   }
 
   const result = await response.json();
@@ -123,39 +129,27 @@ export async function addRecord(action, payload) {
 }
 
 export async function addInvestimento(payload) {
-  return requestPost("addInvestimento", {
-    payload,
-  });
+  return requestPost("addInvestimento", { payload });
 }
 
 export async function addDespesa(payload) {
-  return requestPost("addDespesa", {
-    payload,
-  });
+  return requestPost("addDespesa", { payload });
 }
 
 export async function addVenda(payload) {
-  return requestPost("addVenda", {
-    payload,
-  });
+  return requestPost("addVenda", { payload });
 }
 
 export async function addAtividade(payload) {
-  return requestPost("addAtividade", {
-    payload,
-  });
+  return requestPost("addAtividade", { payload });
 }
 
 export async function addOracao(payload) {
-  return requestPost("addOracao", {
-    payload,
-  });
+  return requestPost("addOracao", { payload });
 }
 
 export async function addEstoque(payload) {
-  return requestPost("addEstoque", {
-    payload,
-  });
+  return requestPost("addEstoque", { payload });
 }
 
 export async function updateRecord(sheetName, id, payload) {

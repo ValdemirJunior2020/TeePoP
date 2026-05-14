@@ -1,9 +1,15 @@
-# teepop-caixa-gestao/netlify.toml
+# netlify.toml
 
 [build]
   base = "client"
   command = "npm run build"
   publish = "dist"
+
+[[redirects]]
+  from = "/api/google"
+  to = "https://script.google.com/macros/s/AKfycbzzZeLAnePVGOqKZQKQ3f3Ah0I-k-TK07ClpPR4VBxAh5ikGRPaAHsQWZKVNZwLMqe5/exec"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
