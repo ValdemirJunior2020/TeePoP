@@ -6,6 +6,10 @@ export function hasGoogleScriptUrl() {
   return Boolean(SCRIPT_URL && SCRIPT_URL.trim() !== "");
 }
 
+export function getGoogleScriptUrl() {
+  return SCRIPT_URL || "";
+}
+
 function getScriptUrl() {
   if (!hasGoogleScriptUrl()) {
     throw new Error(
@@ -17,7 +21,9 @@ function getScriptUrl() {
 }
 
 async function requestGet(action) {
-  const url = `${getScriptUrl()}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
+  const url = `${getScriptUrl()}?action=${encodeURIComponent(
+    action
+  )}&_=${Date.now()}`;
 
   const response = await fetch(url, {
     method: "GET",
@@ -68,26 +74,31 @@ export async function getAllData() {
 
 export async function addRecord(action, payload) {
   const actionMap = {
+    addInvestimento: "addInvestimento",
     investimentos: "addInvestimento",
     investimento: "addInvestimento",
     Investimentos: "addInvestimento",
     Investimento: "addInvestimento",
 
+    addDespesa: "addDespesa",
     despesas: "addDespesa",
     despesa: "addDespesa",
     Despesas: "addDespesa",
     Despesa: "addDespesa",
 
+    addVenda: "addVenda",
     vendas: "addVenda",
     venda: "addVenda",
     Vendas: "addVenda",
     Venda: "addVenda",
 
+    addAtividade: "addAtividade",
     atividades: "addAtividade",
     atividade: "addAtividade",
     Atividades: "addAtividade",
     Atividade: "addAtividade",
 
+    addOracao: "addOracao",
     oracoes: "addOracao",
     oracao: "addOracao",
     Oracoes: "addOracao",
@@ -95,6 +106,7 @@ export async function addRecord(action, payload) {
     Orações: "addOracao",
     oração: "addOracao",
 
+    addEstoque: "addEstoque",
     estoque: "addEstoque",
     Estoque: "addEstoque",
   };
@@ -110,14 +122,38 @@ export async function addRecord(action, payload) {
   });
 }
 
+export async function addInvestimento(payload) {
+  return requestPost("addInvestimento", {
+    payload,
+  });
+}
+
+export async function addDespesa(payload) {
+  return requestPost("addDespesa", {
+    payload,
+  });
+}
+
 export async function addVenda(payload) {
   return requestPost("addVenda", {
     payload,
   });
 }
 
+export async function addAtividade(payload) {
+  return requestPost("addAtividade", {
+    payload,
+  });
+}
+
 export async function addOracao(payload) {
   return requestPost("addOracao", {
+    payload,
+  });
+}
+
+export async function addEstoque(payload) {
+  return requestPost("addEstoque", {
     payload,
   });
 }
