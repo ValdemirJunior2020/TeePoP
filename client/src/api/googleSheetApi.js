@@ -1,73 +1,199 @@
 // client/src/api/googleSheetApi.js
+
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
-function ensureUrl() {
-  if (!SCRIPT_URL || SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL')) {
-    throw new Error('Configure o VITE_GOOGLE_SCRIPT_URL no arquivo .env antes de usar o app.');
-  }
-}
-
-async function readJsonResponse(response) {
-  const text = await response.text();
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    throw new Error(`Resposta inválida do servidor: ${text.slice(0, 160)}`);
-  }
-}
-
-export async function getAllData() {
-  ensureUrl();
-  const url = `${SCRIPT_URL}?action=getAllData&t=${Date.now()}`;
-  const response = await fetch(url, { method: 'GET' });
-  const result = await readJsonResponse(response);
-  if (!result.success) throw new Error(result.error || 'Erro ao buscar dados.');
-  return result.data;
-}
-
-export async function addRecord(action, payload) {
-  ensureUrl();
-  const form = new URLSearchParams();
-  form.append('action', action);
-  form.append('payload', JSON.stringify(payload));
-
-  const response = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: form,
-  });
-  const result = await readJsonResponse(response);
-  if (!result.success) throw new Error(result.error || 'Erro ao salvar registro.');
-  return result.data;
-}
-
-export async function updateRecord(sheetName, id, payload) {
-  ensureUrl();
-  const form = new URLSearchParams();
-  form.append('action', 'updateRecord');
-  form.append('sheetName', sheetName);
-  form.append('id', id);
-  form.append('payload', JSON.stringify(payload));
-
-  const response = await fetch(SCRIPT_URL, { method: 'POST', body: form });
-  const result = await readJsonResponse(response);
-  if (!result.success) throw new Error(result.error || 'Erro ao atualizar registro.');
-  return result.data;
-}
-
-export async function deleteRecord(sheetName, id, socio = '') {
-  ensureUrl();
-  const form = new URLSearchParams();
-  form.append('action', 'deleteRecord');
-  form.append('sheetName', sheetName);
-  form.append('id', id);
-  form.append('socio', socio);
-
-  const response = await fetch(SCRIPT_URL, { method: 'POST', body: form });
-  const result = await readJsonResponse(response);
-  if (!result.success) throw new Error(result.error || 'Erro ao excluir registro.');
-  return result.data;
-}
+/* =========================
+   CONFIG
+========================= */
 
 export function hasGoogleScriptUrl() {
-  return Boolean(SCRIPT_URL && !SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL'));
+  return Boolean(SCRIPT_URL && SCRIPT_URL.trim() !== "");
+}
+
+export function getGoogleScriptUrl() {
+  return SCRIPT_URL || "";
+}
+
+function getScriptUrl() {
+  if (!hasGoogleScriptUrl()) {
+    throw new Error(
+      "URL do Google Apps Script não configurada. Verifique o arquivo client/.env."
+    );
+  }
+
+  return SCRIPT_URL;
+}
+
+/* =========================
+   BASE REQUESTS
+========================= */
+
+async function requestGet(action) {
+  const url = `${getScriptUrl()}?action=${encodeURIComponent(action)}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("Erro ao conectar com o Google Sheets.");
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || "Erro retornado pelo Google Apps Script.");
+  }
+
+  return result.data;
+}
+
+async function requestPost(action, payload = {}) {
+  const response = await fetch(getScriptUrl(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+    },
+    body: JSON.stringify({
+      action,
+      ...payload,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Erro ao salvar dados no Google Sheets.");
+  }
+
+  const result = await response.json();
+
+  if (!result.success) {
+    throw new Error(result.error || "Erro retornado pelo Google Apps Script.");
+  }
+
+  return result.data;
+}
+
+/* =========================
+   GET ALL DATA
+========================= */
+
+export async function getAllData() {
+  return requestGet("getAllData");
+}
+
+/* =========================
+   ADD RECORD
+   Used by App.jsx:
+   addRecord(action, payload)
+========================= */
+
+export async function addRecord(action, payload) {
+  const actionMap = {
+    investimentos: "addInvestimento",
+    investimento: "addInvestimento",
+    Investimentos: "addInvestimento",
+    Investimento: "addInvestimento",
+
+    despesas: "addDespesa",
+    despesa: "addDespesa",
+    Despesas: "addDespesa",
+    Despesa: "addDespesa",
+
+    vendas: "addVenda",
+    venda: "addVenda",
+    Vendas: "addVenda",
+    Venda: "addVenda",
+
+    atividades: "addAtividade",
+    atividade: "addAtividade",
+    Atividades: "addAtividade",
+    Atividade: "addAtividade",
+
+    oracoes: "addOracao",
+    oracao: "addOracao",
+    Oracoes: "addOracao",
+    Oracao: "addOracao",
+    Orações: "addOracao",
+    oração: "addOracao",
+
+    estoque: "addEstoque",
+    Estoque: "addEstoque",
+  };
+
+  const scriptAction = actionMap[action];
+
+  if (!scriptAction) {
+    throw new Error(`Tipo de registro inválido: ${action}`);
+  }
+
+  return requestPost(scriptAction, {
+    payload,
+  });
+}
+
+/* =========================
+   DIRECT ADD FUNCTIONS
+   Used by pages like Vendas.jsx / Oracoes.jsx
+========================= */
+
+export async function addInvestimento(payload) {
+  return requestPost("addInvestimento", {
+    payload,
+  });
+}
+
+export async function addDespesa(payload) {
+  return requestPost("addDespesa", {
+    payload,
+  });
+}
+
+export async function addVenda(payload) {
+  return requestPost("addVenda", {
+    payload,
+  });
+}
+
+export async function addAtividade(payload) {
+  return requestPost("addAtividade", {
+    payload,
+  });
+}
+
+export async function addOracao(payload) {
+  return requestPost("addOracao", {
+    payload,
+  });
+}
+
+export async function addEstoque(payload) {
+  return requestPost("addEstoque", {
+    payload,
+  });
+}
+
+/* =========================
+   UPDATE RECORD
+   Used by App.jsx:
+   updateRecord(sheetName, id, payload)
+========================= */
+
+export async function updateRecord(sheetName, id, payload) {
+  return requestPost("updateRecord", {
+    sheetName,
+    id,
+    payload,
+  });
+}
+
+/* =========================
+   DELETE RECORD
+   Used by App.jsx:
+   deleteRecord(sheetName, id, socio)
+========================= */
+
+export async function deleteRecord(sheetName, id, socio = "") {
+  return requestPost("deleteRecord", {
+    sheetName,
+    id,
+    socio,
+  });
 }

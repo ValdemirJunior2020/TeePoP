@@ -204,7 +204,9 @@ function PartnerCard({ title, values, money = false }) {
             <span className="font-black text-teepopInk">{socio}</span>
 
             <span className="font-black text-teepopPurple">
-              {money ? formatCurrency(values?.[socio] || 0) : values?.[socio] || 0}
+              {money
+                ? formatCurrency(values?.[socio] || 0)
+                : values?.[socio] || 0}
             </span>
           </div>
         ))}
