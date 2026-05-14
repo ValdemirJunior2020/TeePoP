@@ -1,0 +1,54 @@
+/* client/src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #25154a;
+  background: #fff8ef;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-height: 100vh; overflow-x: hidden; }
+
+.rainbow-bg {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 216, 77, 0.55), transparent 28%),
+    radial-gradient(circle at 90% 15%, rgba(53, 214, 255, 0.45), transparent 25%),
+    radial-gradient(circle at 15% 85%, rgba(255, 79, 184, 0.35), transparent 25%),
+    radial-gradient(circle at 85% 85%, rgba(107, 56, 255, 0.25), transparent 25%),
+    linear-gradient(135deg, #fff8ef 0%, #fff1fb 38%, #effbff 100%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.rainbow-line {
+  height: 6px;
+  background: linear-gradient(90deg, #ff4fb8, #ffd84d, #35d6ff, #6b38ff, #ff4fb8);
+}
+
+.input-pop {
+  @apply w-full rounded-2xl border border-purple-100 bg-white px-4 py-3 text-base text-teepopInk outline-none transition focus:border-teepopPink focus:ring-4 focus:ring-pink-100;
+}
+
+.btn-pop {
+  @apply rounded-2xl px-5 py-3 font-extrabold shadow-pop transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.badge-pop {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-extrabold;
+}
+
+@media (max-width: 767px) {
+  .desktop-table { display: none; }
+}
+
+@media (min-width: 768px) {
+  .mobile-cards { display: none; }
+}

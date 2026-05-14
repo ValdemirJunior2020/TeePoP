@@ -1,0 +1,18 @@
+// client/src/pages/Atividades.jsx
+import { useState } from 'react';
+import FormCard from '../components/FormCard';
+import DataTable from '../components/DataTable';
+import { SOCIOS, TIPOS_ATIVIDADE } from '../utils/constants';
+import { formatDate, todayISO } from '../utils/formatters';
+
+const initialForm = { socio: 'Pastora Priscila', data: todayISO(), atividade: '', tempoDedicado: '', tipoAtividade: 'Produção', resultado: '', proximoPasso: '' };
+
+export default function Atividades({ records, onSave, onUpdate, onDelete }) {
+  const [form, setForm] = useState(initialForm); const [editingId, setEditingId] = useState(null); const setValue = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+  function submit(e) { e.preventDefault(); if (!form.atividade) return alert('Descreva o que foi feito hoje.'); const done = editingId ? onUpdate('Atividades', editingId, form) : onSave('addAtividade', form); Promise.resolve(done).then(() => { setForm(initialForm); setEditingId(null); }); }
+  return <div><FormCard title={editingId ? 'Editar atividade' : 'Atividades do dia'} subtitle="Cada sócio registra o que fez, resultado e próximo passo." emoji="✅"><form onSubmit={submit} className="grid gap-4 md:grid-cols-2"><Select label="Sócio" value={form.socio} onChange={(v) => setValue('socio', v)} options={SOCIOS} /><Input label="Data" type="date" value={form.data} onChange={(v) => setValue('data', v)} /><Select label="Tipo de atividade" value={form.tipoAtividade} onChange={(v) => setValue('tipoAtividade', v)} options={TIPOS_ATIVIDADE} /><Input label="Tempo dedicado (opcional)" placeholder="Ex: 2 horas" value={form.tempoDedicado} onChange={(v) => setValue('tempoDedicado', v)} /><TextArea label="O que fez hoje?" value={form.atividade} onChange={(v) => setValue('atividade', v)} /><TextArea label="Resultado do dia" value={form.resultado} onChange={(v) => setValue('resultado', v)} /><TextArea label="Próximo passo" value={form.proximoPasso} onChange={(v) => setValue('proximoPasso', v)} /><div className="md:col-span-2 flex gap-3"><button className="btn-pop bg-teepopPink text-white">{editingId ? 'Salvar edição' : 'Salvar atividade'}</button>{editingId ? <button type="button" onClick={() => { setEditingId(null); setForm(initialForm); }} className="btn-pop bg-teepopYellow text-teepopInk">Cancelar</button> : null}</div></form></FormCard><DataTable title="Histórico de atividades" records={records} columns={columns} onEdit={(r) => { setEditingId(r.id); setForm({ ...initialForm, ...r }); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onDelete={(r) => onDelete('Atividades', r.id, r.socio)} /></div>;
+}
+const columns = [{ key: 'data', label: 'Data', render: formatDate }, { key: 'socio', label: 'Sócio' }, { key: 'tipoAtividade', label: 'Tipo' }, { key: 'atividade', label: 'Atividade' }, { key: 'tempoDedicado', label: 'Tempo' }, { key: 'resultado', label: 'Resultado' }];
+function Input({ label, value, onChange, ...props }) { return <label className="font-black text-teepopInk">{label}<input className="input-pop mt-1" value={value || ''} onChange={(e) => onChange(e.target.value)} {...props} /></label>; }
+function TextArea({ label, value, onChange }) { return <label className="font-black text-teepopInk md:col-span-2">{label}<textarea className="input-pop mt-1 min-h-28" value={value || ''} onChange={(e) => onChange(e.target.value)} /></label>; }
+function Select({ label, value, onChange, options }) { return <label className="font-black text-teepopInk">{label}<select className="input-pop mt-1" value={value} onChange={(e) => onChange(e.target.value)}>{options.map((o) => <option key={o} value={o}>{o}</option>)}</select></label>; }
