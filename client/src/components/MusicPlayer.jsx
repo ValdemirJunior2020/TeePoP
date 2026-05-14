@@ -7,13 +7,13 @@ const songs = [
     id: "pt",
     title: "🇧🇷 Abre a TeePoP",
     language: "Português",
-    src: "/mp3/Abre a TeePoP.mp3",
+    src: "/mp3/Abre%20a%20TeePoP.mp3",
   },
   {
     id: "en",
     title: "🇺🇸 Tampa Estourada",
     language: "English",
-    src: "/mp3/Tampa Estourada (1).mp3",
+    src: "/mp3/tampa-estourada-en.mp3",
   },
 ];
 
@@ -79,7 +79,7 @@ export default function MusicPlayer() {
             Tocando agora: {selectedSong.title}
           </p>
 
-          <audio key={selectedSong.src} controls className="w-full">
+          <audio key={selectedSong.src} controls preload="metadata" className="w-full">
             <source src={selectedSong.src} type="audio/mpeg" />
             Seu navegador não suporta áudio.
           </audio>
