@@ -2,16 +2,8 @@
 
 const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
 
-/* =========================
-   CONFIG
-========================= */
-
 export function hasGoogleScriptUrl() {
   return Boolean(SCRIPT_URL && SCRIPT_URL.trim() !== "");
-}
-
-export function getGoogleScriptUrl() {
-  return SCRIPT_URL || "";
 }
 
 function getScriptUrl() {
@@ -24,14 +16,13 @@ function getScriptUrl() {
   return SCRIPT_URL;
 }
 
-/* =========================
-   BASE REQUESTS
-========================= */
-
 async function requestGet(action) {
-  const url = `${getScriptUrl()}?action=${encodeURIComponent(action)}`;
+  const url = `${getScriptUrl()}?action=${encodeURIComponent(action)}&_=${Date.now()}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     throw new Error("Erro ao conectar com o Google Sheets.");
@@ -71,19 +62,9 @@ async function requestPost(action, payload = {}) {
   return result.data;
 }
 
-/* =========================
-   GET ALL DATA
-========================= */
-
 export async function getAllData() {
   return requestGet("getAllData");
 }
-
-/* =========================
-   ADD RECORD
-   Used by App.jsx:
-   addRecord(action, payload)
-========================= */
 
 export async function addRecord(action, payload) {
   const actionMap = {
@@ -129,31 +110,8 @@ export async function addRecord(action, payload) {
   });
 }
 
-/* =========================
-   DIRECT ADD FUNCTIONS
-   Used by pages like Vendas.jsx / Oracoes.jsx
-========================= */
-
-export async function addInvestimento(payload) {
-  return requestPost("addInvestimento", {
-    payload,
-  });
-}
-
-export async function addDespesa(payload) {
-  return requestPost("addDespesa", {
-    payload,
-  });
-}
-
 export async function addVenda(payload) {
   return requestPost("addVenda", {
-    payload,
-  });
-}
-
-export async function addAtividade(payload) {
-  return requestPost("addAtividade", {
     payload,
   });
 }
@@ -164,18 +122,6 @@ export async function addOracao(payload) {
   });
 }
 
-export async function addEstoque(payload) {
-  return requestPost("addEstoque", {
-    payload,
-  });
-}
-
-/* =========================
-   UPDATE RECORD
-   Used by App.jsx:
-   updateRecord(sheetName, id, payload)
-========================= */
-
 export async function updateRecord(sheetName, id, payload) {
   return requestPost("updateRecord", {
     sheetName,
@@ -183,12 +129,6 @@ export async function updateRecord(sheetName, id, payload) {
     payload,
   });
 }
-
-/* =========================
-   DELETE RECORD
-   Used by App.jsx:
-   deleteRecord(sheetName, id, socio)
-========================= */
 
 export async function deleteRecord(sheetName, id, socio = "") {
   return requestPost("deleteRecord", {

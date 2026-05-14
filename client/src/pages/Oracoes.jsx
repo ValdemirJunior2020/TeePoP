@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from "react";
 import FormCard from "../components/FormCard";
-import DataTable from "../components/DataTable";
 import EmptyState from "../components/EmptyState";
 import LoadingSpinner from "../components/LoadingSpinner";
-import { addOracao, deleteRecord } from "../api/googleSheetApi";
 import { SOCIOS } from "../utils/constants";
 import { formatDate } from "../utils/formatters";
 
@@ -44,14 +42,6 @@ const mensagensProfeticas = [
       "Oh! Quão bom e quão suave é que os irmãos vivam em união. — Salmos 133:1",
     emoji: "🤝🔥",
   },
-  {
-    titulo: "Há crescimento vindo com ordem e paz",
-    texto:
-      "Que a TeePoP cresça sem perder o coração, sem perder a transparência e sem perder a presença de Deus no centro de tudo.",
-    versiculo:
-      "Busquem, pois, em primeiro lugar o Reino de Deus e a sua justiça, e todas essas coisas lhes serão acrescentadas. — Mateus 6:33",
-    emoji: "👕🌟",
-  },
 ];
 
 function gerarMensagemProfetica() {
@@ -59,7 +49,11 @@ function gerarMensagemProfetica() {
   return mensagensProfeticas[index];
 }
 
-export default function Oracoes({ data, refreshData }) {
+function sameDate(a, b) {
+  return String(a || "").slice(0, 10) === String(b || "").slice(0, 10);
+}
+
+export default function Oracoes({ records = [], onSave, onDelete }) {
   const [form, setForm] = useState({
     socio: "",
     data: hoje,
@@ -73,11 +67,13 @@ export default function Oracoes({ data, refreshData }) {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [mensagemProfetica, setMensagemProfetica] = useState(null);
+  const [filtroSocio, setFiltroSocio] = useState("Todos");
+  const [filtroData, setFiltroData] = useState("");
 
-  const oracoes = data?.oracoes || [];
+  const oracoes = records || [];
 
   const oracoesHoje = useMemo(() => {
-    return oracoes.filter((item) => item.data === hoje);
+    return oracoes.filter((item) => sameDate(item.data, hoje));
   }, [oracoes]);
 
   const sociosQueOraramHoje = useMemo(() => {
@@ -89,6 +85,20 @@ export default function Oracoes({ data, refreshData }) {
   const sociosFaltando = useMemo(() => {
     return SOCIOS.filter((socio) => !sociosQueOraramHoje.includes(socio));
   }, [sociosQueOraramHoje]);
+
+  const oracoesFiltradas = useMemo(() => {
+    return oracoes
+      .filter((item) => {
+        const socioOk = filtroSocio === "Todos" || item.socio === filtroSocio;
+        const dataOk = !filtroData || sameDate(item.data, filtroData);
+        return socioOk && dataOk;
+      })
+      .sort((a, b) => {
+        const dataA = new Date(a.criadoEm || a.data || 0).getTime();
+        const dataB = new Date(b.criadoEm || b.data || 0).getTime();
+        return dataB - dataA;
+      });
+  }, [oracoes, filtroSocio, filtroData]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -116,6 +126,21 @@ export default function Oracoes({ data, refreshData }) {
       return;
     }
 
+    const jaRegistrouNaData = oracoes.find(
+      (item) => item.socio === form.socio && sameDate(item.data, form.data)
+    );
+
+    if (jaRegistrouNaData) {
+      const continuar = window.confirm(
+        `${form.socio} já registrou oração nesta data.\n\nDeseja continuar e registrar novamente?`
+      );
+
+      if (!continuar) {
+        setErro("Oração duplicada não foi salva.");
+        return;
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -124,16 +149,13 @@ export default function Oracoes({ data, refreshData }) {
         criadoEm: new Date().toISOString(),
       };
 
-      const response = await addOracao(payload);
-
-      if (!response?.success) {
-        throw new Error(response?.error || "Erro ao salvar oração.");
-      }
-
-      const novaMensagem = gerarMensagemProfetica();
+      await onSave("oracoes", payload);
 
       setSucesso(`Oração registrada com sucesso por ${form.socio}.`);
-      setMensagemProfetica(novaMensagem);
+      setMensagemProfetica(gerarMensagemProfetica());
+
+      setFiltroSocio("Todos");
+      setFiltroData("");
 
       setForm({
         socio: "",
@@ -143,10 +165,6 @@ export default function Oracoes({ data, refreshData }) {
         versiculo: "",
         observacao: "",
       });
-
-      if (refreshData) {
-        await refreshData();
-      }
 
       window.scrollTo({
         top: 0,
@@ -160,30 +178,13 @@ export default function Oracoes({ data, refreshData }) {
   }
 
   async function handleDelete(record) {
-    const confirmar = window.confirm(
-      "Tem certeza que deseja apagar esta oração?"
-    );
-
-    if (!confirmar) return;
+    if (!record?.id) return;
 
     try {
       setLoading(true);
-
-      const response = await deleteRecord({
-        tab: "Oracoes",
-        id: record.id,
-      });
-
-      if (!response?.success) {
-        throw new Error(response?.error || "Erro ao apagar oração.");
-      }
-
+      await onDelete("Oracoes", record.id, record.socio || "");
       setSucesso("Oração apagada com sucesso.");
       setMensagemProfetica(null);
-
-      if (refreshData) {
-        await refreshData();
-      }
     } catch (error) {
       setErro(error.message || "Não foi possível apagar a oração.");
     } finally {
@@ -237,10 +238,6 @@ export default function Oracoes({ data, refreshData }) {
                 “{mensagemProfetica.versiculo}”
               </p>
             </div>
-
-            <p className="mt-5 text-sm font-bold text-slate-500">
-              Que esta oração seja uma semente de fé, crescimento e unidade.
-            </p>
           </div>
         </section>
       ) : null}
@@ -416,27 +413,109 @@ export default function Oracoes({ data, refreshData }) {
       </FormCard>
 
       <section className="rounded-[2rem] bg-white p-5 shadow-pop">
-        <h2 className="text-2xl font-black text-teepopInk">
-          Histórico de orações
-        </h2>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-teepopInk">
+              Mural de Orações
+            </h2>
+            <p className="mt-1 font-bold text-purple-500">
+              Aqui todos os sócios podem ler as orações registradas.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <select
+              value={filtroSocio}
+              onChange={(e) => setFiltroSocio(e.target.value)}
+              className="input-pop"
+            >
+              <option value="Todos">Todos os sócios</option>
+              {SOCIOS.map((socio) => (
+                <option key={socio} value={socio}>
+                  {socio}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={filtroData}
+              onChange={(e) => setFiltroData(e.target.value)}
+              className="input-pop"
+            />
+          </div>
+        </div>
 
         {loading ? (
           <LoadingSpinner />
-        ) : oracoes.length === 0 ? (
-          <EmptyState texto="Nenhuma oração registrada ainda." />
+        ) : oracoesFiltradas.length === 0 ? (
+          <EmptyState texto="Nenhuma oração encontrada. Limpe os filtros ou registre uma oração." />
         ) : (
-          <DataTable
-            data={oracoes}
-            columns={[
-              { key: "data", label: "Data", render: (item) => formatDate(item.data) },
-              { key: "socio", label: "Sócio" },
-              { key: "orou", label: "Orou" },
-              { key: "pedidoOracao", label: "Pedido" },
-              { key: "versiculo", label: "Versículo" },
-              { key: "observacao", label: "Observação" },
-            ]}
-            onDelete={handleDelete}
-          />
+          <div className="mt-6 grid gap-5">
+            {oracoesFiltradas.map((oracao) => (
+              <article
+                key={oracao.id}
+                className="overflow-hidden rounded-[2rem] border border-pink-100 bg-gradient-to-br from-white via-pink-50 to-cyan-50 p-5 shadow-sm"
+              >
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="badge-pop bg-white text-teepopPurple">
+                      🙏 {oracao.socio || "Sócio"}
+                    </p>
+
+                    <h3 className="mt-3 text-2xl font-black text-teepopInk">
+                      Oração registrada em {formatDate(oracao.data)}
+                    </h3>
+
+                    <p className="mt-1 text-sm font-black text-emerald-600">
+                      Orou pela empresa? {oracao.orou || "Sim"}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(oracao)}
+                    className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-black text-red-600 hover:bg-red-100"
+                  >
+                    Excluir
+                  </button>
+                </div>
+
+                {oracao.pedidoOracao ? (
+                  <div className="mt-5 rounded-3xl bg-white/90 p-4">
+                    <p className="text-sm font-black uppercase text-teepopPink">
+                      Pedido de oração
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-base font-semibold leading-relaxed text-purple-800">
+                      {oracao.pedidoOracao}
+                    </p>
+                  </div>
+                ) : null}
+
+                {oracao.versiculo ? (
+                  <div className="mt-4 rounded-3xl bg-yellow-50 p-4">
+                    <p className="text-sm font-black uppercase text-yellow-700">
+                      Palavra / Versículo
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-base font-black italic text-teepopInk">
+                      “{oracao.versiculo}”
+                    </p>
+                  </div>
+                ) : null}
+
+                {oracao.observacao ? (
+                  <div className="mt-4 rounded-3xl bg-cyan-50 p-4">
+                    <p className="text-sm font-black uppercase text-cyan-700">
+                      Observação
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap text-base font-semibold leading-relaxed text-slate-700">
+                      {oracao.observacao}
+                    </p>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
         )}
       </section>
     </div>
