@@ -7,11 +7,43 @@ import { calculateSummary, latest } from "../utils/calculations";
 import { formatCurrency, formatDate } from "../utils/formatters";
 import { SOCIOS } from "../utils/constants";
 
+function getHoje() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function sameDate(a, b) {
+  return String(a || "").slice(0, 10) === String(b || "").slice(0, 10);
+}
+
+function getTimeValue(item) {
+  return new Date(item.criadoEm || item.data || 0).getTime();
+}
+
 export default function Dashboard({ data, setActivePage }) {
   const summary = calculateSummary(data);
-  const ultimasAtividades = latest(data.atividades, 4);
+
   const ultimasVendas = latest(data.vendas, 4);
   const ultimasDespesas = latest(data.despesas, 4);
+
+  const hoje = getHoje();
+
+  const atividadesHoje = (data.atividades || [])
+    .filter((item) => sameDate(item.data, hoje))
+    .map((item) => ({
+      ...item,
+      tipoRegistro: "atividade",
+    }));
+
+  const oracoesHoje = (data.oracoes || [])
+    .filter((item) => sameDate(item.data, hoje))
+    .map((item) => ({
+      ...item,
+      tipoRegistro: "oracao",
+    }));
+
+  const movimentosHoje = [...atividadesHoje, ...oracoesHoje].sort(
+    (a, b) => getTimeValue(b) - getTimeValue(a)
+  );
 
   return (
     <div className="space-y-6">
@@ -42,10 +74,17 @@ export default function Dashboard({ data, setActivePage }) {
               </button>
 
               <button
-                onClick={() => setActivePage("investimentos")}
+                onClick={() => setActivePage("despesas")}
                 className="btn-pop bg-teepopYellow text-teepopInk"
               >
-                Adicionar investimento
+                Registrar despesa
+              </button>
+
+              <button
+                onClick={() => setActivePage("oracoes")}
+                className="btn-pop bg-purple-500 text-white"
+              >
+                Registrar oração
               </button>
             </div>
           </div>
@@ -154,35 +193,117 @@ export default function Dashboard({ data, setActivePage }) {
       </section>
 
       <section className="rounded-[2rem] bg-white/90 p-5 shadow-pop">
-        <h2 className="text-2xl font-black text-teepopInk">
-          Últimas atividades do dia
-        </h2>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-teepopInk">
+              Orações e atividades de hoje
+            </h2>
+            <p className="mt-1 font-bold text-purple-500">
+              Aqui aparecem as orações registradas hoje e também o que cada
+              sócio fez no dia.
+            </p>
+          </div>
 
-        {ultimasAtividades.length === 0 ? (
-          <EmptyState texto="Quando um sócio registrar uma atividade, ela aparecerá aqui." />
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setActivePage("oracoes")}
+              className="rounded-2xl bg-purple-100 px-4 py-2 text-sm font-black text-purple-700 hover:bg-purple-200"
+            >
+              🙏 Registrar oração
+            </button>
+
+            <button
+              onClick={() => setActivePage("atividades")}
+              className="rounded-2xl bg-emerald-100 px-4 py-2 text-sm font-black text-emerald-700 hover:bg-emerald-200"
+            >
+              ✅ Registrar atividade
+            </button>
+          </div>
+        </div>
+
+        {movimentosHoje.length === 0 ? (
+          <EmptyState texto="Quando um sócio registrar uma oração ou atividade hoje, aparecerá aqui." />
         ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {ultimasAtividades.map((item) => (
-              <div key={item.id} className="rounded-3xl bg-purple-50 p-4">
-                <p className="text-xs font-black uppercase text-teepopPink">
-                  {item.socio} • {formatDate(item.data)}
-                </p>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {movimentosHoje.map((item) => {
+              if (item.tipoRegistro === "oracao") {
+                return (
+                  <div
+                    key={`oracao-${item.id}`}
+                    className="rounded-3xl bg-gradient-to-br from-purple-50 via-pink-50 to-cyan-50 p-5 shadow-sm"
+                  >
+                    <p className="badge-pop bg-white text-teepopPurple">
+                      🙏 Oração registrada
+                    </p>
 
-                <h3 className="mt-1 text-lg font-black text-teepopInk">
-                  {item.tipoAtividade || "Atividade"}
-                </h3>
+                    <h3 className="mt-3 text-xl font-black text-teepopInk">
+                      {item.socio} orou pela TeePoP
+                    </h3>
 
-                <p className="mt-1 text-sm font-semibold text-purple-700">
-                  {item.atividade}
-                </p>
+                    <p className="mt-1 text-sm font-black text-emerald-600">
+                      Data: {formatDate(item.data)}
+                    </p>
 
-                {item.proximoPasso ? (
-                  <p className="mt-2 rounded-2xl bg-white p-2 text-sm font-bold text-teepopPurple">
-                    Próximo: {item.proximoPasso}
+                    {item.pedidoOracao ? (
+                      <div className="mt-4 rounded-3xl bg-white/90 p-4">
+                        <p className="text-xs font-black uppercase text-teepopPink">
+                          Pedido de oração
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-purple-800">
+                          {item.pedidoOracao}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {item.versiculo ? (
+                      <div className="mt-4 rounded-3xl bg-yellow-50 p-4">
+                        <p className="text-xs font-black uppercase text-yellow-700">
+                          Versículo
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm font-black italic text-teepopInk">
+                          “{item.versiculo}”
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={`atividade-${item.id}`}
+                  className="rounded-3xl bg-purple-50 p-5 shadow-sm"
+                >
+                  <p className="badge-pop bg-white text-teepopPink">
+                    ✅ Atividade do dia
                   </p>
-                ) : null}
-              </div>
-            ))}
+
+                  <p className="mt-3 text-xs font-black uppercase text-teepopPink">
+                    {item.socio} • {formatDate(item.data)}
+                  </p>
+
+                  <h3 className="mt-1 text-xl font-black text-teepopInk">
+                    {item.tipoAtividade || "Atividade"}
+                  </h3>
+
+                  <p className="mt-2 text-sm font-semibold text-purple-700">
+                    {item.atividade}
+                  </p>
+
+                  {item.resultado ? (
+                    <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-emerald-700">
+                      Resultado: {item.resultado}
+                    </p>
+                  ) : null}
+
+                  {item.proximoPasso ? (
+                    <p className="mt-3 rounded-2xl bg-white p-3 text-sm font-bold text-teepopPurple">
+                      Próximo: {item.proximoPasso}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
